@@ -1,14 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My PWA App</title>
+
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0b66ff">
-  <title>PWA App</title>
+
+  <style>
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background:#f5f7fb;
+    }
+    header{
+      background:#0b66ff;
+      color:#fff;
+      padding:16px;
+      text-align:center;
+      font-size:20px;
+      font-weight:bold;
+    }
+    .content{
+      padding:20px;
+      text-align:center;
+      font-size:16px;
+    }
+
+    /* Floating Install Button */
+    #installBtn{
+      position:fixed;
+      right:16px;
+      bottom:16px;
+      padding:14px 16px;
+      background:#0b66ff;
+      color:#fff;
+      border:none;
+      border-radius:50px;
+      font-size:14px;
+      font-weight:bold;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      display:none;
+      z-index:9999;
+    }
+  </style>
 </head>
+
 <body>
-  <h2 style="padding:20px;">PWA Working ✅</h2>
+
+<header>🚀 My First PWA App</header>
+
+<div class="content">
+  <p>Welcome bhai 👋</p>
+  <p>Ye app PWA me convert ho chuki hai</p>
+</div>
+
+<button id="installBtn">Install App</button>
+
+<script>
+  let deferredPrompt;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById("installBtn").style.display = "block";
+  });
+
+  document.getElementById("installBtn").addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById("installBtn").style.display = "none";
+  });
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
+</script>
+
 </body>
 </html>
-
