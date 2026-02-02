@@ -1,1 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Home</title>
+  <style>
+    body{margin:0;font-family:Arial;background:#f5f7fb;}
+    header{background:#0b66ff;color:#fff;padding:16px;text-align:center;font-weight:700;}
+    .wrap{max-width:420px;margin:24px auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 10px 25px rgba(0,0,0,.10);}
+    button{padding:10px 14px;border:none;border-radius:10px;background:#111827;color:#fff;font-weight:700;}
+    .name{font-weight:700;}
+  </style>
+</head>
+<body>
+
+<header>Home</header>
+
+<div class="wrap">
+  <p>Welcome, <span class="name" id="nm"></span> ✅</p>
+  <p>Ab yaha se hum next pages add karenge.</p>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+  // Protect page
+  if (localStorage.getItem("isLoggedIn") !== "yes") {
+    window.location.href = "login.html";
+  }
+
+  document.getElementById("nm").innerText = localStorage.getItem("loginUser") || "User";
+
+  function logout(){
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("loginUser");
+    window.location.href = "login.html";
+  }
+</script>
+
+</body>
+</html>
 
