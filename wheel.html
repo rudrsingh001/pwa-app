@@ -15,7 +15,7 @@
       padding:18px;
     }
     .card{
-      width:min(520px, 100%);
+      width:min(560px, 100%);
       background:#fff;
       border-radius:16px;
       box-shadow:0 10px 25px rgba(0,0,0,.12);
@@ -48,7 +48,7 @@
       width:0;height:0;
       border-left:14px solid transparent;
       border-right:14px solid transparent;
-      border-top:26px solid #111827; /* dark arrow */
+      border-top:26px solid #111827;
       filter: drop-shadow(0 6px 8px rgba(0,0,0,.25));
       z-index:5;
     }
@@ -60,20 +60,39 @@
       width:0;height:0;
       border-left:10px solid transparent;
       border-right:10px solid transparent;
-      border-top:18px solid #ef4444; /* red tip */
+      border-top:18px solid #ef4444;
     }
 
+    .topbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      margin-top:8px;
+    }
+    .chip{
+      border:1px solid #e5e7eb;
+      padding:8px 10px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:13px;
+      background:#fff;
+      color:#111827;
+    }
+    .chip b{color:#0b66ff;}
     .btns{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap;}
     button{
       padding:12px 16px;
       border:none;
       border-radius:12px;
-      font-weight:700;
+      font-weight:800;
       cursor:pointer;
     }
     #spinBtn{background:#0b66ff;color:#fff;min-width:160px;}
     #spinBtn:disabled{opacity:.6;cursor:not-allowed;}
     #resetBtn{background:#111827;color:#fff;}
+    #soundBtn{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;}
+
     .result{
       margin-top:12px;
       padding:12px;
@@ -81,15 +100,37 @@
       background:#f1f5ff;
       border:1px solid #dbe7ff;
       font-size:16px;
-      font-weight:800;
+      font-weight:900;
       color:#0b3ea8;
       min-height:22px;
+    }
+
+    .history{
+      margin-top:12px;
+      text-align:left;
+      background:#fafafa;
+      border:1px solid #eee;
+      border-radius:12px;
+      padding:12px;
+    }
+    .history h3{
+      margin:0 0 8px;
+      font-size:14px;
+      color:#111827;
+    }
+    .history ul{
+      margin:0;
+      padding:0 0 0 16px;
+      color:#374151;
+      font-size:13px;
+      line-height:1.5;
     }
     .tiny{
       margin-top:10px;
       font-size:12px;
       color:#6b7280;
       line-height:1.4;
+      text-align:center;
     }
     .pill{
       display:inline-block;
@@ -97,7 +138,7 @@
       border-radius:999px;
       background:#fff;
       border:1px solid #e5e7eb;
-      font-weight:700;
+      font-weight:800;
       color:#111827;
       margin-top:8px;
     }
@@ -109,6 +150,11 @@
     <h2>Spin & Win 🎡</h2>
     <p class="sub">Arrow pe jahan rukega — wahi prize milega ✅</p>
 
+    <div class="topbar">
+      <div class="chip">Wallet: <b id="wallet">0</b> 🪙</div>
+      <div class="chip">Spins left today: <b id="left">5</b>/5</div>
+    </div>
+
     <div class="stage">
       <div class="arrow"></div>
       <canvas id="wheel" width="600" height="600"></canvas>
@@ -116,10 +162,16 @@
 
     <div class="btns">
       <button id="spinBtn">SPIN</button>
-      <button id="resetBtn" type="button">Reset</button>
+      <button id="resetBtn" type="button">Reset Wheel</button>
+      <button id="soundBtn" type="button">Sound: ON</button>
     </div>
 
     <div id="result" class="result">Ready ✅</div>
+
+    <div class="history">
+      <h3>Last 10 wins</h3>
+      <ul id="histList"></ul>
+    </div>
 
     <div class="tiny">
       Probability: <span class="pill">10 & 20 = 99.99%</span>
@@ -128,32 +180,48 @@
   </div>
 
 <script>
-  // --------- CONFIG ----------
+  // ---------------- CONFIG ----------------
   const prizes = [10, 20, 30, 40, 50, 100, 500];
 
   // 99.99% chance for 10 & 20. Remaining 0.01% among rest.
-  // Total = 1.0
   const weights = {
-    10: 0.55,     // 55%
-    20: 0.4499,   // 44.99%  => total 99.99%
-    30: 0.00002,  // 0.002%
+    10: 0.55,
+    20: 0.4499,   // total 99.99%
+    30: 0.00002,
     40: 0.00002,
     50: 0.00002,
     100:0.00001,
     500:0.00001
   };
 
+  const DAILY_LIMIT = 5;
+
   // Visual colors: blue/white segments + red outer border
   const COLORS = ["#ffffff", "#dbeafe"]; // white, light blue
   const TEXT_COLOR = "#0b3ea8";
 
-  // --------- STATE ----------
+  // LocalStorage keys
+  const LS = {
+    WALLET: "walletCoins",
+    HIST: "winHistory",
+    DAY: "spinDay",
+    COUNT: "spinCount",
+    SOUND: "soundOn"
+  };
+
+  // ---------------- ELEMENTS ----------------
   const canvas = document.getElementById("wheel");
   const ctx = canvas.getContext("2d");
   const resultEl = document.getElementById("result");
   const spinBtn = document.getElementById("spinBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const soundBtn = document.getElementById("soundBtn");
 
+  const walletEl = document.getElementById("wallet");
+  const leftEl = document.getElementById("left");
+  const histList = document.getElementById("histList");
+
+  // ---------------- STATE ----------------
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
   const R = 250;
@@ -161,18 +229,146 @@
   const N = prizes.length;
   const segAngle = (Math.PI * 2) / N;
 
-  // rotation: radians, 0 means segment 0 starts at angle 0 (to the right)
-  // our pointer/arrow is at TOP. Angle of TOP in canvas is -90deg.
   let rotation = 0;
   let spinning = false;
 
-  drawWheel();
+  // Sound state
+  let soundOn = (localStorage.getItem(LS.SOUND) ?? "1") === "1";
+
+  // WebAudio setup (beep/tick sounds without uploading files)
+  let audioCtx = null;
+  function ensureAudio(){
+    if (!soundOn) return;
+    if (!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended"){
+      audioCtx.resume().catch(()=>{});
+    }
+  }
+  function beep(freq=800, dur=0.03, type="sine", vol=0.08){
+    if (!soundOn) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = vol;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur);
+  }
+  function winSound(){
+    if (!soundOn) return;
+    beep(880, 0.06, "triangle", 0.10);
+    setTimeout(()=>beep(1100, 0.07, "triangle", 0.10), 80);
+    setTimeout(()=>beep(1320, 0.08, "triangle", 0.10), 170);
+  }
+
+  function vibrate(pattern){
+    // pattern can be number or array
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  // --------------- DAILY LIMIT LOGIC ---------------
+  function todayKey(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function getSpinCountToday(){
+    const day = localStorage.getItem(LS.DAY);
+    const t = todayKey();
+    if (day !== t){
+      // new day => reset
+      localStorage.setItem(LS.DAY, t);
+      localStorage.setItem(LS.COUNT, "0");
+      return 0;
+    }
+    return parseInt(localStorage.getItem(LS.COUNT) || "0", 10);
+  }
+
+  function incSpinCount(){
+    const c = getSpinCountToday() + 1;
+    localStorage.setItem(LS.COUNT, String(c));
+    return c;
+  }
+
+  function spinsLeft(){
+    const used = getSpinCountToday();
+    return Math.max(0, DAILY_LIMIT - used);
+  }
+
+  // --------------- WALLET & HISTORY ---------------
+  function getWallet(){
+    return parseInt(localStorage.getItem(LS.WALLET) || "0", 10);
+  }
+  function setWallet(v){
+    localStorage.setItem(LS.WALLET, String(v));
+    walletEl.textContent = v;
+  }
+
+  function getHistory(){
+    try{
+      return JSON.parse(localStorage.getItem(LS.HIST) || "[]");
+    }catch(e){
+      return [];
+    }
+  }
+  function setHistory(arr){
+    localStorage.setItem(LS.HIST, JSON.stringify(arr));
+    renderHistory(arr);
+  }
+
+  function addHistory(prize){
+    const d = new Date();
+    const time = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    const date = d.toLocaleDateString([], {day:"2-digit", month:"short"});
+    const item = `${date} ${time} — Won ${prize} coins`;
+    const arr = getHistory();
+    arr.unshift(item);
+    arr.splice(10); // last 10
+    setHistory(arr);
+  }
+
+  function renderHistory(arr){
+    histList.innerHTML = "";
+    if (!arr.length){
+      const li = document.createElement("li");
+      li.textContent = "No wins yet";
+      histList.appendChild(li);
+      return;
+    }
+    for (const line of arr){
+      const li = document.createElement("li");
+      li.textContent = line;
+      histList.appendChild(li);
+    }
+  }
+
+  function updateUI(){
+    walletEl.textContent = getWallet();
+    leftEl.textContent = spinsLeft();
+    spinBtn.disabled = spinning || spinsLeft() === 0;
+
+    soundBtn.textContent = `Sound: ${soundOn ? "ON" : "OFF"}`;
+    soundBtn.style.background = soundOn ? "#f3f4f6" : "#fee2e2";
+    soundBtn.style.borderColor = soundOn ? "#e5e7eb" : "#fecaca";
+
+    renderHistory(getHistory());
+  }
 
   // --------- RANDOM (better than Math.random) ----------
   function rand01(){
     const a = new Uint32Array(1);
     crypto.getRandomValues(a);
-    return a[0] / 4294967296; // 0..1
+    return a[0] / 4294967296;
   }
 
   function weightedPick(){
@@ -182,135 +378,149 @@
       acc += weights[p] ?? 0;
       if (r <= acc) return p;
     }
-    // fallback due to float rounding
     return 10;
   }
 
-  // --------- GEOMETRY: Make wheel stop EXACTLY on target under the arrow ----------
-  // Arrow is at TOP => angleTop = -PI/2 in canvas coordinates.
-  // For a given rotation, the segment "i" center angle in world space is:
-  // center = rotation + i*segAngle + segAngle/2
-  // We want center == angleTop (mod 2PI). So solve rotationTarget.
+  // --------- STOP EXACTLY on target under arrow ----------
   function rotationForPrize(prize){
     const i = prizes.indexOf(prize);
     const angleTop = -Math.PI / 2;
-
-    // targetRotation ≡ angleTop - (i*segAngle + segAngle/2)  (mod 2PI)
     let target = angleTop - (i * segAngle + segAngle / 2);
-
-    // Normalize target to [0, 2PI)
     target = ((target % (Math.PI*2)) + (Math.PI*2)) % (Math.PI*2);
     return target;
   }
 
-  // For "nice" landing (not always exact same place), add a tiny random offset
-  // but keep it inside the same segment so prize doesn't change.
   function addSafeJitter(targetRot){
-    const maxJitter = segAngle * 0.18; // 18% of segment width
+    const maxJitter = segAngle * 0.18;
     const jitter = (rand01() * 2 - 1) * maxJitter;
     return targetRot + jitter;
   }
 
-  // --------- ANIMATION (accelerate -> steady -> slow) ----------
-  // We animate rotation from current rotation to finalRotation using a piecewise easing.
+  // --------- ANIMATION curve ----------
   function easePiecewise(t){
-    // t: 0..1
-    // 0-0.18: ease-in (accel)
-    // 0.18-0.70: linear-ish (steady)
-    // 0.70-1: ease-out (slow)
     if (t < 0.18){
       const x = t / 0.18;
-      return x * x; // ease in quad
+      return x * x;
     }
     if (t < 0.70){
       const x = (t - 0.18) / (0.70 - 0.18);
-      // map from 0.18 phase end to something smooth
-      // Start value at end of first phase = 1
-      // We'll blend: 1 + x * k
-      return 1 + x * 2.2; // steady growth
+      return 1 + x * 2.2;
     }
-    // ease-out
     const x = (t - 0.70) / 0.30;
-    const easeOut = 1 - Math.pow(1 - x, 3); // cubic
+    const easeOut = 1 - Math.pow(1 - x, 3);
     return 3.2 + easeOut * 1.8;
+  }
+
+  // tick helper: play ticks more often as wheel slows
+  function playTick(t){
+    // t 0..1
+    // only small ticks, don't spam
+    if (!soundOn) return;
+    if (t < 0.25 && Math.random() < 0.08) beep(900, 0.02, "square", 0.03);
+    else if (t < 0.75 && Math.random() < 0.10) beep(850, 0.02, "square", 0.04);
+    else if (Math.random() < 0.18) beep(780, 0.025, "square", 0.05);
   }
 
   function spin(){
     if (spinning) return;
 
-    // Decide prize FIRST (reliable) then animate to land there
+    // Daily limit check
+    if (spinsLeft() <= 0){
+      resultEl.textContent = "Daily limit reached (5/5). Kal phir try karo ✅";
+      vibrate([100,60,100]);
+      updateUI();
+      return;
+    }
+
+    // unlock audio on first user action
+    ensureAudio();
+
+    // Decide prize FIRST (reliable)
     const prize = weightedPick();
 
     spinning = true;
-    spinBtn.disabled = true;
+    updateUI();
     resultEl.textContent = "Spinning... 🎯";
+    vibrate(35);
 
     const startRot = rotation;
 
-    // Compute exact target rotation (mod 2PI), plus jitter
     let targetRot = rotationForPrize(prize);
     targetRot = addSafeJitter(targetRot);
 
-    // We also want multiple full spins for fun
-    const extraSpins = 6 + Math.floor(rand01() * 3); // 6-8 rounds
+    const extraSpins = 6 + Math.floor(rand01() * 3); // 6-8
     const twoPi = Math.PI * 2;
 
-    // Current rotation mod 2PI
     const startMod = ((startRot % twoPi) + twoPi) % twoPi;
 
-    // delta to reach target from current (forward direction)
     let delta = targetRot - startMod;
     if (delta < 0) delta += twoPi;
 
-    // Final rotation in absolute radians
     const finalRot = startRot + extraSpins * twoPi + delta;
-
-    const duration = 4200 + Math.floor(rand01() * 700); // 4.2s - 4.9s
+    const duration = 4200 + Math.floor(rand01() * 700);
     const t0 = performance.now();
+
+    const endVal = easePiecewise(1);
 
     function frame(now){
       const t = Math.min(1, (now - t0) / duration);
-
-      // Use piecewise curve but normalize to 0..1 movement:
-      // We map easePiecewise(t) into a 0..1 by dividing by final value.
-      const endVal = easePiecewise(1);
       const prog = easePiecewise(t) / endVal;
 
       rotation = startRot + (finalRot - startRot) * prog;
-
       drawWheel();
+
+      // ticks + tiny vibration near end
+      playTick(t);
+      if (t > 0.80 && t < 0.95 && Math.random() < 0.06) vibrate(10);
 
       if (t < 1){
         requestAnimationFrame(frame);
       } else {
-        // Snap EXACTLY to final rotation (prevents 1px error)
-        rotation = finalRot;
+        rotation = finalRot; // snap exact
         drawWheel();
 
-        // Show prize
+        // Count this spin NOW (success)
+        incSpinCount();
+
+        // Wallet + history
+        const newWallet = getWallet() + prize;
+        setWallet(newWallet);
+        addHistory(prize);
+
         resultEl.textContent = `You won: ${prize} coins 🪙`;
+        winSound();
+        vibrate([60,40,60]);
+
         spinning = false;
-        spinBtn.disabled = false;
+        updateUI();
       }
     }
 
     requestAnimationFrame(frame);
   }
 
-  function reset(){
+  function resetWheel(){
     rotation = 0;
     resultEl.textContent = "Ready ✅";
     drawWheel();
   }
 
+  function toggleSound(){
+    soundOn = !soundOn;
+    localStorage.setItem(LS.SOUND, soundOn ? "1" : "0");
+    if (soundOn) ensureAudio();
+    updateUI();
+  }
+
   spinBtn.addEventListener("click", spin);
-  resetBtn.addEventListener("click", reset);
+  resetBtn.addEventListener("click", resetWheel);
+  soundBtn.addEventListener("click", toggleSound);
 
   // --------- DRAWING ----------
   function drawWheel(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // background circle shadow
+    // shadow bg
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, R+12, 0, Math.PI*2);
@@ -323,7 +533,6 @@
       const start = rotation + i * segAngle;
       const end   = start + segAngle;
 
-      // slice
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.arc(cx, cy, R, start, end);
@@ -331,12 +540,10 @@
       ctx.fillStyle = COLORS[i % 2];
       ctx.fill();
 
-      // thin divider line
       ctx.strokeStyle = "rgba(11,102,255,0.25)";
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      // text (coins)
       const mid = (start + end) / 2;
       ctx.save();
       ctx.translate(cx, cy);
@@ -372,16 +579,19 @@
     ctx.fillStyle = "#111827";
     ctx.fill();
 
-    // small top marker dot near border (for visual)
+    // top marker dot near border
     ctx.beginPath();
     ctx.arc(cx, cy - (R - 8), 6, 0, Math.PI*2);
     ctx.fillStyle = "#111827";
     ctx.fill();
   }
 
-  // Optional: protect page (if you used login system)
+  // init
+  drawWheel();
+  updateUI();
+
+  // Optional: login protect (uncomment if needed)
   // if (localStorage.getItem("isLoggedIn") !== "yes") window.location.href = "login.html";
 </script>
 </body>
 </html>
-
