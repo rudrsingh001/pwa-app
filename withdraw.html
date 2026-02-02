@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Withdraw</title>
+  <style>
+    body{margin:0;font-family:Arial;background:#f5f7fb;padding:18px;}
+    .wrap{max-width:520px;margin:0 auto;background:#fff;border-radius:16px;
+      box-shadow:0 10px 25px rgba(0,0,0,.12);padding:16px;}
+    h2{margin:6px 0 4px;text-align:center;}
+    .sub{margin:0 0 14px;text-align:center;color:#6b7280;font-size:13px;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:10px 0;}
+    .chip{border:1px solid #e5e7eb;border-radius:999px;padding:8px 10px;font-weight:800;font-size:13px;}
+    .chip b{color:#0b66ff;}
+    .box{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:12px;margin-top:12px;}
+    label{display:block;font-size:13px;font-weight:700;margin:10px 0 6px;color:#111827;}
+    input,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px;outline:none;}
+    button{width:100%;padding:12px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;}
+    .btn{background:#0b66ff;color:#fff;margin-top:12px;}
+    .btn:disabled{opacity:.6;cursor:not-allowed;}
+    .danger{background:#fee2e2;border:1px solid #fecaca;color:#991b1b;}
+    .ok{background:#ecfeff;border:1px solid #a5f3fc;color:#155e75;}
+    .small{font-size:12px;color:#6b7280;line-height:1.4;margin-top:10px;}
+    .list{margin:10px 0 0;padding:0 0 0 18px;font-size:13px;color:#374151;line-height:1.5;}
+    .topbtns{display:flex;gap:10px;margin-top:12px;}
+    .topbtns a{flex:1;text-decoration:none;}
+    .dark{background:#111827;color:#fff;}
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <h2>Withdraw 💸</h2>
+  <p class="sub">Minimum coins complete hone par hi withdraw lagega</p>
+
+  <div class="row">
+    <div class="chip">Wallet: <b id="wallet">0</b> 🪙</div>
+    <div class="chip">Min: <b id="minCoins">0</b> 🪙</div>
+    <div class="chip">Value: <b id="rsValue">₹0</b></div>
+  </div>
+
+  <div id="statusBox" class="box"></div>
+
+  <div class="box">
+    <label>Withdraw Method</label>
+    <select id="method">
+      <option value="UPI">UPI</option>
+      <option value="Paytm">Paytm</option>
+      <option value="PhonePe">PhonePe</option>
+      <option value="Bank">Bank</option>
+    </select>
+
+    <label>UPI / Number / Account</label>
+    <input id="account" type="text" placeholder="e.g. yourupi@bank / 98xxxxxx / Acc no." />
+
+    <label>Name</label>
+    <input id="name" type="text" placeholder="Your name" />
+
+    <label>Coins to Withdraw</label>
+    <input id="coins" type="number" placeholder="e.g. 2000" />
+
+    <button id="submitBtn" class="btn" onclick="submitWithdraw()">Submit Withdraw Request</button>
+
+    <div class="small">
+      ✅ Tip: galat UPI/number daloge to payment fail ho sakta hai. <br/>
+      ⏳ Cooldown: 1 hour (spam rokne ke liye).
+    </div>
+  </div>
+
+  <div class="box">
+    <b>Pending Requests (local)</b>
+    <ul id="reqList" class="list"></ul>
+  </div>
+
+  <div class="topbtns">
+    <a href="wheel.html"><button class="dark" type="button">Back to Spin</button></a>
+    <a href="home.html"><button class="dark" type="button">Home</button></a>
+  </div>
+</div>
+
+<script>
+  // -------- SETTINGS (change here easily) --------
+  const MIN_COINS = 2000;  // 👉 recommended (you can set 1000 if you want)
+  const RS_VALUE  = 50;    // ₹ for minimum coins
+  const COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+
+  // LocalStorage keys
+  const LS = {
+    WALLET: "walletCoins",
+    REQS: "withdrawRequests",
+    LAST: "lastWithdrawTime"
+  };
+
+  const walletEl = document.getElementById("wallet");
+  const minEl = document.getElementById("minCoins");
+  const rsEl = document.getElementById("rsValue");
+  const statusBox = document.getElementById("statusBox");
+  const submitBtn = document.getElementById("submitBtn");
+  const reqList = document.getElementById("reqList");
+
+  function getWallet(){
+    return parseInt(localStorage.getItem(LS.WALLET) || "0", 10);
+  }
+  function setWallet(v){
+    localStorage.setItem(LS.WALLET, String(v));
+  }
+
+  function getReqs(){
+    try { return JSON.parse(localStorage.getItem(LS.REQS) || "[]"); }
+    catch(e){ return []; }
+  }
+  function setReqs(arr){
+    localStorage.setItem(LS.REQS, JSON.stringify(arr));
+    renderReqs();
+  }
+
+  function nowStr(){
+    const d = new Date();
+    return d.toLocaleString();
+  }
+
+  function cooldownLeft(){
+    const last = parseInt(localStorage.getItem(LS.LAST) || "0", 10);
+    if (!last) return 0;
+    const diff = (last + COOLDOWN_MS) - Date.now();
+    return Math.max(0, diff);
+  }
+
+  function formatMs(ms){
+    const m = Math.ceil(ms/60000);
+    if (m <= 1) return "1 min";
+    return `${m} min`;
+  }
+
+  function updateUI(){
+    const w = getWallet();
+    walletEl.textContent = w;
+    minEl.textContent = MIN_COINS;
+    rsEl.textContent = `₹${RS_VALUE}`;
+
+    const left = cooldownLeft();
+
+    if (w < MIN_COINS){
+      statusBox.className = "box danger";
+      statusBox.innerHTML = `❌ Wallet coins kam hain. Minimum <b>${MIN_COINS}</b> coins chahiye.`;
+      submitBtn.disabled = true;
+    } else if (left > 0){
+      statusBox.className = "box danger";
+      statusBox.innerHTML = `⏳ Cooldown active. Next request after <b>${formatMs(left)}</b>.`;
+      submitBtn.disabled = true;
+    } else {
+      statusBox.className = "box ok";
+      statusBox.innerHTML = `✅ Eligible! Tum withdraw request laga sakte ho.`;
+      submitBtn.disabled = false;
+    }
+
+    renderReqs();
+  }
+
+  function renderReqs(){
+    const arr = getReqs();
+    reqList.innerHTML = "";
+    if (!arr.length){
+      const li = document.createElement("li");
+      li.textContent = "No requests yet";
+      reqList.appendChild(li);
+      return;
+    }
+    // show last 10
+    const show = arr.slice(-10).reverse();
+    for (const r of show){
+      const li = document.createElement("li");
+      li.textContent = `${r.time} — ${r.coins} coins → ₹${r.rs} (${r.method}) [${r.status}]`;
+      reqList.appendChild(li);
+    }
+  }
+
+  function submitWithdraw(){
+    const w = getWallet();
+    const method = document.getElementById("method").value;
+    const account = document.getElementById("account").value.trim();
+    const name = document.getElementById("name").value.trim();
+    const coins = parseInt(document.getElementById("coins").value || "0", 10);
+
+    if (!name || name.length < 2){ alert("Name sahi se likho"); return; }
+    if (!account || account.length < 6){ alert("UPI/Number/Account sahi se likho"); return; }
+
+    if (!coins || coins < MIN_COINS){
+      alert(`Minimum ${MIN_COINS} coins withdraw kar sakte ho`);
+      return;
+    }
+    if (coins > w){
+      alert("Itne coins wallet me nahi hain");
+      return;
+    }
+
+    if (cooldownLeft() > 0){
+      alert("Cooldown active hai");
+      return;
+    }
+
+    // Simple conversion: MIN_COINS => RS_VALUE (proportional)
+    const rs = Math.floor((coins / MIN_COINS) * RS_VALUE);
+
+    // Deduct coins immediately (to avoid double withdraw)
+    setWallet(w - coins);
+
+    const req = {
+      id: "REQ-" + Math.random().toString(16).slice(2,10).toUpperCase(),
+      time: nowStr(),
+      name,
+      method,
+      account,
+      coins,
+      rs,
+      status: "Pending"
+    };
+
+    const arr = getReqs();
+    arr.push(req);
+    setReqs(arr);
+
+    localStorage.setItem(LS.LAST, String(Date.now()));
+
+    alert(`Request submitted ✅\nYou will receive: ₹${rs}\nStatus: Pending`);
+    document.getElementById("coins").value = "";
+    updateUI();
+  }
+
+  updateUI();
+  // keep refreshing cooldown label
+  setInterval(updateUI, 5000);
+
+  // Optional: login protect
+  // if (localStorage.getItem("isLoggedIn") !== "yes") window.location.href = "login.html";
+</script>
+
+</body>
+</html>
