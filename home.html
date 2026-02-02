@@ -4,44 +4,114 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Home</title>
+
   <style>
-    body{margin:0;font-family:Arial;background:#f5f7fb;}
-    header{background:#0b66ff;color:#fff;padding:16px;text-align:center;font-weight:700;}
-    .wrap{max-width:420px;margin:24px auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 10px 25px rgba(0,0,0,.10);}
-    button{padding:10px 14px;border:none;border-radius:10px;background:#111827;color:#fff;font-weight:700;}
-    .name{font-weight:700;}
+    body{
+      margin:0;
+      font-family:Arial, sans-serif;
+      background:#f5f7fb;
+    }
+    header{
+      background:#0b66ff;
+      color:#fff;
+      padding:16px;
+      text-align:center;
+      font-size:20px;
+      font-weight:800;
+    }
+    .wrap{
+      max-width:520px;
+      margin:20px auto;
+      padding:0 14px;
+    }
+    .card{
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 10px 25px rgba(0,0,0,.12);
+      padding:18px;
+    }
+    .card p{
+      margin:6px 0;
+      font-size:15px;
+    }
+    .name{
+      font-weight:800;
+    }
+
+    .btn-group{
+      display:flex;
+      gap:12px;
+      margin-top:16px;
+      flex-wrap:wrap;
+    }
+    .btn-group a{
+      flex:1;
+      text-decoration:none;
+      min-width:160px;
+    }
+    .btn{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:14px;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .spin{
+      background:#0b66ff;
+      color:#fff;
+    }
+    .withdraw{
+      background:#111827;
+      color:#fff;
+    }
+    .logout{
+      margin-top:14px;
+      background:#fee2e2;
+      color:#991b1b;
+      border:none;
+      padding:12px;
+      width:100%;
+      border-radius:14px;
+      font-weight:800;
+      cursor:pointer;
+    }
   </style>
 </head>
+
 <body>
 
 <header>Home</header>
-<a href="wheel.html" style="text-decoration:none;">
-  <button style="background:#0b66ff;">Open Spin Wheel</button>
-</a>
 
 <div class="wrap">
-  <p>Welcome, <span class="name" id="nm"></span> ✅</p>
-  <p>Ab yaha se hum next pages add karenge.</p>
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-  <a href="wheel.html" style="text-decoration:none;flex:1;min-width:160px;">
-    <button style="width:100%;background:#0b66ff;">Open Spin Wheel</button>
-  </a>
+  <div class="card">
+    <p>Welcome, <span class="name" id="nm"></span> ✅</p>
+    <p>Ab yaha se tum app ke sab features use kar sakte ho.</p>
 
-  <a href="withdraw.html" style="text-decoration:none;flex:1;min-width:160px;">
-    <button style="width:100%;background:#111827;">Withdraw</button>
-  </a>
-</div>
+    <!-- MAIN ACTION BUTTONS -->
+    <div class="btn-group">
+      <a href="wheel.html">
+        <button class="btn spin">🎡 Spin Wheel</button>
+      </a>
 
-  <button onclick="logout()">Logout</button>
+      <a href="withdraw.html">
+        <button class="btn withdraw">💸 Withdraw</button>
+      </a>
+    </div>
+
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
 </div>
 
 <script>
-  // Protect page
+  // Page protection
   if (localStorage.getItem("isLoggedIn") !== "yes") {
     window.location.href = "login.html";
   }
 
-  document.getElementById("nm").innerText = localStorage.getItem("loginUser") || "User";
+  document.getElementById("nm").innerText =
+    localStorage.getItem("loginUser") || "User";
 
   function logout(){
     localStorage.removeItem("isLoggedIn");
@@ -52,7 +122,3 @@
 
 </body>
 </html>
-
-<a href="withdraw.html" style="text-decoration:none;">
-  <button style="background:#111827;">Withdraw</button>
-</a>
