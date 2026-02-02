@@ -5,94 +5,74 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Home</title>
 
-  <style>
-    body{
-      margin:0;
-      font-family:Arial, sans-serif;
-      background:#f5f7fb;
-    }
-    header{
-      background:#0b66ff;
-      color:#fff;
-      padding:16px;
-      text-align:center;
-      font-size:20px;
-      font-weight:800;
-    }
-    .wrap{
-      max-width:520px;
-      margin:20px auto;
-      padding:0 14px;
-    }
-    .card{
-      background:#fff;
-      border-radius:16px;
-      box-shadow:0 10px 25px rgba(0,0,0,.12);
-      padding:18px;
-    }
-    .card p{
-      margin:6px 0;
-      font-size:15px;
-    }
-    .name{
-      font-weight:800;
-    }
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b66ff">
+  <link rel="icon" href="icon-192.png">
 
-    .btn-group{
-      display:flex;
-      gap:12px;
-      margin-top:16px;
-      flex-wrap:wrap;
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;}
+    header{background:#0b66ff;color:#fff;padding:16px;text-align:center;font-size:20px;font-weight:900;}
+    .wrap{max-width:520px;margin:18px auto;padding:0 14px;}
+    .card{background:#fff;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px;}
+    .card p{margin:6px 0;font-size:15px;}
+    .name{font-weight:900;}
+
+    .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+    .chip{
+      flex:1;min-width:160px;
+      border:1px solid #e5e7eb;border-radius:14px;padding:10px 12px;
+      background:#fafafa;font-weight:900;font-size:14px;color:#111827;
     }
-    .btn-group a{
-      flex:1;
-      text-decoration:none;
-      min-width:160px;
+    .chip b{color:#0b66ff;}
+
+    .btn-group{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;}
+    .btn-group a{flex:1;min-width:160px;text-decoration:none;}
+    .btn{width:100%;padding:14px;border:none;border-radius:14px;font-size:15px;font-weight:900;cursor:pointer;}
+    .spin{background:#0b66ff;color:#fff;}
+    .withdraw{background:#111827;color:#fff;}
+    .ad{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;}
+
+    .logout{margin-top:14px;background:#fee2e2;color:#991b1b;border:none;padding:12px;width:100%;
+      border-radius:14px;font-weight:900;cursor:pointer;}
+
+    /* Splash overlay */
+    .splash{
+      position:fixed;inset:0;background:#0b66ff;color:#fff;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      z-index:9999;
     }
-    .btn{
-      width:100%;
-      padding:14px;
-      border:none;
-      border-radius:14px;
-      font-size:15px;
-      font-weight:900;
-      cursor:pointer;
-    }
-    .spin{
-      background:#0b66ff;
-      color:#fff;
-    }
-    .withdraw{
-      background:#111827;
-      color:#fff;
-    }
-    .logout{
-      margin-top:14px;
-      background:#fee2e2;
-      color:#991b1b;
-      border:none;
-      padding:12px;
-      width:100%;
-      border-radius:14px;
-      font-weight:800;
-      cursor:pointer;
-    }
+    .splash img{width:90px;height:90px;border-radius:22px;background:#fff;padding:10px;}
+    .splash h2{margin:14px 0 0;font-size:22px;}
+    .splash p{margin:6px 0 0;opacity:.9;font-weight:700;}
   </style>
 </head>
 
 <body>
+
+<!-- Splash Screen -->
+<div id="splash" class="splash">
+  <img src="icon-192.png" alt="App Icon">
+  <h2>My PWA App</h2>
+  <p>Loading...</p>
+</div>
 
 <header>Home</header>
 
 <div class="wrap">
   <div class="card">
     <p>Welcome, <span class="name" id="nm"></span> ✅</p>
-    <p>Ab yaha se tum app ke sab features use kar sakte ho.</p>
+    <p>Wallet, daily spins aur spin unlock yahin se control hoga.</p>
 
-    <!-- MAIN ACTION BUTTONS -->
+    <div class="stats">
+      <div class="chip">Wallet: <b id="wallet">0</b> 🪙</div>
+      <div class="chip">Spins left: <b id="left">0</b>/5</div>
+    </div>
+
     <div class="btn-group">
+      <button class="btn ad" id="adBtn" onclick="watchAd()">📺 Watch Ad to Unlock Spin</button>
+
       <a href="wheel.html">
-        <button class="btn spin">🎡 Spin Wheel</button>
+        <button class="btn spin" id="spinBtn">🎡 Spin Wheel</button>
       </a>
 
       <a href="withdraw.html">
@@ -105,18 +85,132 @@
 </div>
 
 <script>
-  // Page protection
+  // protect
   if (localStorage.getItem("isLoggedIn") !== "yes") {
     window.location.href = "login.html";
   }
 
-  document.getElementById("nm").innerText =
-    localStorage.getItem("loginUser") || "User";
+  // show name
+  document.getElementById("nm").innerText = localStorage.getItem("loginUser") || "User";
+
+  // shared keys (match wheel.html)
+  const LS = {
+    WALLET: "walletCoins",
+    DAY: "spinDay",
+    COUNT: "spinCount",
+    UNLOCK_UNTIL: "spinUnlockUntil" // ads unlock expiry timestamp
+  };
+  const DAILY_LIMIT = 5;
+
+  function todayKey(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function getWallet(){
+    return parseInt(localStorage.getItem(LS.WALLET) || "0", 10);
+  }
+
+  function getSpinCountToday(){
+    const day = localStorage.getItem(LS.DAY);
+    const t = todayKey();
+    if (day !== t){
+      localStorage.setItem(LS.DAY, t);
+      localStorage.setItem(LS.COUNT, "0");
+      return 0;
+    }
+    return parseInt(localStorage.getItem(LS.COUNT) || "0", 10);
+  }
+
+  function spinsLeft(){
+    return Math.max(0, DAILY_LIMIT - getSpinCountToday());
+  }
+
+  function isUnlocked(){
+    const until = parseInt(localStorage.getItem(LS.UNLOCK_UNTIL) || "0", 10);
+    return Date.now() < until;
+  }
+
+  function formatUnlock(){
+    const until = parseInt(localStorage.getItem(LS.UNLOCK_UNTIL) || "0", 10);
+    const sec = Math.max(0, Math.floor((until - Date.now())/1000));
+    return sec;
+  }
+
+  // Demo "Ad": 6 seconds wait then unlock for 2 minutes
+  // (Later: yahi function me AdMob rewarded callback laga dena)
+  let adRunning = false;
+  function watchAd(){
+    if (adRunning) return;
+
+    if (spinsLeft() <= 0){
+      alert("Daily limit reached (5/5). Kal try karo ✅");
+      return;
+    }
+
+    adRunning = true;
+    const btn = document.getElementById("adBtn");
+    let t = 6;
+    btn.innerText = `Ad playing... ${t}s`;
+    const timer = setInterval(()=>{
+      t--;
+      btn.innerText = `Ad playing... ${t}s`;
+      if (t <= 0){
+        clearInterval(timer);
+        // unlock for 2 minutes
+        localStorage.setItem(LS.UNLOCK_UNTIL, String(Date.now() + 2*60*1000));
+        adRunning = false;
+        updateUI();
+        alert("Spin unlocked ✅ Ab Spin Wheel kholo!");
+      }
+    }, 1000);
+  }
+
+  function updateUI(){
+    document.getElementById("wallet").innerText = getWallet();
+    document.getElementById("left").innerText = spinsLeft();
+
+    const btn = document.getElementById("adBtn");
+    const spinBtn = document.getElementById("spinBtn");
+
+    if (spinsLeft() <= 0){
+      btn.disabled = true;
+      btn.innerText = "Daily limit reached ✅";
+      spinBtn.disabled = true;
+      return;
+    }
+
+    if (isUnlocked()){
+      const s = formatUnlock();
+      btn.disabled = true;
+      btn.innerText = `✅ Spin Unlocked (${s}s left)`;
+      spinBtn.disabled = false;
+    } else {
+      btn.disabled = false;
+      btn.innerText = "📺 Watch Ad to Unlock Spin";
+      spinBtn.disabled = true; // lock until ad watched
+    }
+  }
+
+  // Splash hide
+  setTimeout(()=>{ document.getElementById("splash").style.display = "none"; }, 900);
+
+  // refresh UI
+  updateUI();
+  setInterval(updateUI, 1000);
 
   function logout(){
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("loginUser");
     window.location.href = "login.html";
+  }
+
+  // optional: register SW
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
   }
 </script>
 
