@@ -501,9 +501,10 @@ function isUnlocked(){
         addHistory(prize);
 
         resultEl.textContent = `You won: ${prize} coins 🪙`;
-        winSound();
         localStorage.removeItem(LS_UNLOCK_UNTIL);
-        vibrate([60,40,60]);
+        winSound();
+
+       vibrate([60,40,60]);
 
         spinning = false;
         updateUI();
