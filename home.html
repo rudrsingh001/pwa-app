@@ -313,17 +313,101 @@ function watchAd(){
 }
 </script>
   <script>
+<!-- Footer Links -->
 <div style="margin-top:12px;text-align:center;font-size:13px;">
   <a href="rules.html">Rules</a> |
   <a href="privacy.html">Privacy</a> |
   <a href="terms.html">Terms</a>
-<div>
- <script> 
-window.addEventListener("load", () => {
-  const sp = document.getElementById("splash");
-  if (sp) sp.style.display = "none";
-});
-setTimeout(() => {
-  const sp = document.getElementById("splash");
-  if (sp) sp.style.display = "none";
-}, 1500);
+</div>
+
+<script>
+  // ===== Ads Logic =====
+  const AD_SEQ = [15,15,30,30,15]; // seconds
+  const LS_AD_INDEX = "adIndex";
+  const LS_UNLOCK = "spinUnlockUntil";
+  const LS_FREE = "freeSpinUsed";
+  const DAILY_LIMIT = 5;
+
+  function getAdIndex(){
+    let i = parseInt(localStorage.getItem(LS_AD_INDEX) || "0", 10);
+    if (i >= AD_SEQ.length) i = 0;
+    return i;
+  }
+
+  function resetDailyAds(){
+    localStorage.setItem(LS_AD_INDEX, "0");
+    localStorage.removeItem(LS_FREE);
+  }
+
+  function watchAd(){
+    if (spinsLeft() <= 0){
+      alert("Daily limit reached");
+      return;
+    }
+
+    let idx = getAdIndex();
+    let sec = AD_SEQ[idx];
+    let retry = false;
+
+    function playAd(){
+      let t = sec;
+      adBtn.innerText = `Ad playing... ${t}s`;
+
+      const timer = setInterval(()=>{
+        t--;
+        adBtn.innerText = `Ad playing... ${t}s`;
+
+        if (t <= 0){
+          clearInterval(timer);
+
+          // SUCCESS
+          localStorage.setItem(LS_UNLOCK, String(Date.now() + 120000));
+          localStorage.setItem(LS_AD_INDEX, String(idx + 1));
+
+          // 30 sec bonus
+          if (sec === 30){
+            const w = getWallet() + 5;
+            localStorage.setItem("walletCoins", String(w));
+          }
+
+          alert("Spin unlocked ✅");
+          updateUI();
+        }
+      }, 1000);
+    }
+
+    // Simulate ad fail (10% chance)
+    if (Math.random() < 0.1 && !retry){
+      retry = true;
+      alert("Ad failed, retrying...");
+      playAd();
+      return;
+    }
+
+    if (Math.random() < 0.1 && retry){
+      if (!localStorage.getItem(LS_FREE)){
+        localStorage.setItem(LS_FREE, "1");
+        localStorage.setItem(LS_UNLOCK, String(Date.now() + 120000));
+        alert("Free spin unlocked (1 time) ✅");
+        updateUI();
+        return;
+      }
+      alert("Try later ❌");
+      return;
+    }
+
+    playAd();
+  }
+
+  // ===== Splash hide (safe) =====
+  window.addEventListener("load", () => {
+    const sp = document.getElementById("splash");
+    if (sp) sp.style.display = "none";
+  });
+
+  setTimeout(() => {
+    const sp = document.getElementById("splash");
+    if (sp) sp.style.display = "none";
+  }, 1500);
+</script>
+
