@@ -430,6 +430,12 @@ function isUnlocked(){
 
   function spin(){
     if (spinning) return;
+  // 🔒 Ads unlock check (Home page pe watch ad ke baad hi spin)
+  if (!isUnlocked()){
+    resultEl.textContent = "Locked 🔒 Pehle Home page pe 'Watch Ad' karo.";
+    alert("Spin locked 🔒\nHome page pe 'Watch Ad to Unlock Spin' karo.");
+    return;
+  }
 
     // Daily limit check
     if (spinsLeft() <= 0){
