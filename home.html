@@ -196,9 +196,18 @@
     }
   }
 
-  // Splash hide
-  setTimeout(()=>{ document.getElementById("splash").style.display = "none"; }, 900);
+// Splash hide (safe)
+(function(){
+  const sp = document.getElementById("splash");
 
+  // Always hide after 1.2 sec (even if JS error later)
+  setTimeout(()=>{ if (sp) sp.style.display = "none"; }, 1200);
+
+  // Also hide on full load
+  window.addEventListener("load", ()=>{ if (sp) sp.style.display = "none"; });
+})();
+
+  
   // refresh UI
   updateUI();
   setInterval(updateUI, 1000);
