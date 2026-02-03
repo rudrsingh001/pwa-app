@@ -316,4 +316,13 @@ function watchAd(){
   <a href="rules.html">Rules</a> |
   <a href="privacy.html">Privacy</a> |
   <a href="terms.html">Terms</a>
-</div>
+<div>
+ <script> 
+window.addEventListener("load", () => {
+  const sp = document.getElementById("splash");
+  if (sp) sp.style.display = "none";
+});
+setTimeout(() => {
+  const sp = document.getElementById("splash");
+  if (sp) sp.style.display = "none";
+}, 1500);
