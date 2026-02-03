@@ -410,6 +410,13 @@
     const easeOut = 1 - Math.pow(1 - x, 3);
     return 3.2 + easeOut * 1.8;
   }
+// 🔒 Ads unlock key (Home page se set hota hai)
+const LS_UNLOCK_UNTIL = "spinUnlockUntil";
+
+function isUnlocked(){
+  const until = parseInt(localStorage.getItem(LS_UNLOCK_UNTIL) || "0", 10);
+  return Date.now() < until;
+}
 
   // tick helper: play ticks more often as wheel slows
   function playTick(t){
