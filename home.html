@@ -1,348 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Home</title>
-
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0b66ff">
-  <link rel="icon" href="icons/icon-192.png">
-
-  <style>
-    body{
-      margin:0;font-family:Arial,sans-serif;background:#f5f7fb;
-      padding-bottom:72px; /* banner space */
-    }
-    header{background:#0b66ff;color:#fff;padding:16px;text-align:center;font-size:20px;font-weight:900;}
-    .wrap{max-width:520px;margin:18px auto;padding:0 14px;}
-    .card{background:#fff;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px;}
-    .tag{margin-top:8px;font-size:13px;color:#6b7280;text-align:center;}
-    .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
-    .chip{
-      flex:1;min-width:160px;background:#fafafa;
-      border:1px solid #e5e7eb;border-radius:14px;padding:10px 12px;
-      font-weight:900;font-size:14px;color:#111827;
-    }
-    .chip b{color:#0b66ff;}
-    .btn-group{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;}
-    .btn-group a{flex:1;min-width:160px;text-decoration:none;}
-    button{
-      width:100%;padding:14px;border:none;border-radius:14px;
-      font-size:15px;font-weight:900;cursor:pointer;
-    }
-    .btn-ad{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;}
-    .btn-spin{background:#0b66ff;color:#fff;}
-    .btn-withdraw{background:#111827;color:#fff;}
-    .logout{margin-top:14px;background:#fee2e2;color:#991b1b;}
-
-    /* Splash overlay */
-    .splash{
-      position:fixed;inset:0;background:#0b66ff;color:#fff;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      z-index:9999;
-    }
-    .splash img{width:90px;height:90px;border-radius:22px;background:#fff;padding:10px;}
-    .splash h2{margin:14px 0 4px;font-size:22px;}
-    .splash p{margin:6px 0;opacity:.9;font-weight:700;}
-    /* Bottom banner */
-    .banner{
-      position:fixed;bottom:0;left:0;right:0;height:60px;
-      background:#e5e7eb;border-top:1px solid #d1d5db;
-      display:flex;align-items:center;justify-content:center;
-      font-weight:900;z-index:999;
-    }
-    .footer-links{margin-top:12px;text-align:center;font-size:13px;}
-    .footer-links a{color:#0b66ff;text-decoration:none;font-weight:800;}
-  </style>
-</head>
-
-<body>
-
-  <!-- Splash -->
-  <div id="splash" class="splash">
-    <img src="icons/icon-192.png" alt="App Icon">
-    <h2>My PWA App</h2>
-    <p>Loading...</p>
-  </div>
-
-  <header>Home</header>
-
-  <div class="wrap">
-    <div class="card">
-      <div style="font-size:18px;font-weight:900;">
-        Welcome, <span id="nm">User</span> ✅
-      </div>
-      <div class="tag">Wallet, spins & spin unlock yahin se control hoga.</div>
-
-      <div class="stats">
-        <div class="chip">Wallet: <b id="wallet">0</b> 🪙</div>
-        <div class="chip">Spins left: <b id="left">0</b>/5</div>
-      </div>
-
-      <div class="btn-group">
-        <button id="adBtn" class="btn-ad" onclick="watchAd()">🎬 Watch Ad to Unlock Spin</button>
-
-        <a href="wheel.html">
-          <button id="spinBtn" class="btn-spin">🎡 Spin Wheel</button>
-        </a>
-
-        <a href="withdraw.html">
-          <button class="btn-withdraw">💸 Withdraw</button>
-        </a>
-      </div>
-
-      <button class="logout" onclick="logout()">Logout</button>
-
-      <div class="footer-links">
-        <a href="rules.html">Rules</a> |
-        <a href="privacy.html">Privacy</a> |
-        <a href="terms.html">Terms</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bottom Banner (UI placeholder) -->
-  <div class="banner">📢 Banner Ad (AdMob)</div>
-
-<script>
-  // ---------- Login protect ----------
-  try{
-    if (localStorage.getItem("isLoggedIn") !== "yes"){
-      window.location.href = "login.html";
-    }
-  } catch(e){}
-
-  // show name
-  try{
-    document.getElementById("nm").innerText = localStorage.getItem("loginUser") || "User";
-  } catch(e){}
-
-  // ---------- Shared keys ----------
-  const LS = {
-    WALLET: "walletCoins",
-    DAY: "spinDay",
-    COUNT: "spinCount",
-    UNLOCK_UNTIL: "spinUnlockUntil",
-    AD_INDEX: "adIndex",
-    FREE_USED: "freeSpinUsed"
-  };
-
-  const DAILY_LIMIT = 5;
-  const AD_SEQ = [15,15,30,30,15]; // seconds
-
-  function todayKey(){
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  function getWallet(){
-    return parseInt(localStorage.getItem(LS.WALLET) || "0", 10);
-  }
-  function setWallet(v){
-    localStorage.setItem(LS.WALLET, String(v));
-  }
-
-  function getSpinCountToday(){
-    const day = localStorage.getItem(LS.DAY);
-    const t = todayKey();
-    if (day !== t){
-      localStorage.setItem(LS.DAY, t);
-      localStorage.setItem(LS.COUNT, "0");
-      localStorage.setItem(LS.AD_INDEX, "0");
-      localStorage.removeItem(LS.FREE_USED);
-      return 0;
-    }
-    return parseInt(localStorage.getItem(LS.COUNT) || "0", 10);
-  }
-
-  function spinsLeft(){
-    return Math.max(0, DAILY_LIMIT - getSpinCountToday());
-  }
-
-  function isUnlocked(){
-    const until = parseInt(localStorage.getItem(LS.UNLOCK_UNTIL) || "0", 10);
-    return Date.now() < until;
-  }
-
-  function formatUnlockSec(){
-    const until = parseInt(localStorage.getItem(LS.UNLOCK_UNTIL) || "0", 10);
-    return Math.max(0, Math.floor((until - Date.now())/1000));
-  }
-
-  function getAdIndex(){
-    let i = parseInt(localStorage.getItem(LS.AD_INDEX) || "0", 10);
-    if (i >= AD_SEQ.length) i = 0;
-    return i;
-  }
-
-  let adRunning = false;
-
-  function watchAd(){
-    if (adRunning) return;
-
-    if (spinsLeft() <= 0){
-      alert("Daily limit reached (5/5). Kal phir try karo ✅");
-      updateUI();
-      return;
-    }
-
-    // already unlocked
-    if (isUnlocked()){
-      alert("Already unlocked ✅ Spin Wheel kholo.");
-      updateUI();
-      return;
-    }
-
-    adRunning = true;
-
-    const adBtn = document.getElementById("adBtn");
-    let idx = getAdIndex();
-    let sec = AD_SEQ[idx];
-
-    // demo fail handling: 1 retry then 1 free unlock per day
-    const failChance = 0.08; // small
-    let failedOnce = false;
-
-    function success(){
-      localStorage.setItem(LS.UNLOCK_UNTIL, String(Date.now() + 2*60*1000));
-      localStorage.setItem(LS.AD_INDEX, String(idx + 1));
-
-      // bonus for 30s
-      if (sec === 30){
-        setWallet(getWallet() + 5);
-      }
-
-      adRunning = false;
-      alert("Spin unlocked ✅ Ab Spin Wheel kholo!");
-      updateUI();
-    }
-
-    function fail(){
-      if (!failedOnce){
-        failedOnce = true;
-        alert("Ad failed, retrying...");
-        startCountdown(); // retry same ad
-        return;
-      }
-
-      // one free unlock per day
-      if (!localStorage.getItem(LS.FREE_USED)){
-        localStorage.setItem(LS.FREE_USED, "1");
-        localStorage.setItem(LS.UNLOCK_UNTIL, String(Date.now() + 2*60*1000));
-        adRunning = false;
-        alert("Free spin unlocked (1 time) ✅");
-        updateUI();
-        return;
-      }
-
-      adRunning = false;
-      alert("Try later ❌");
-      updateUI();
-    }
-
-    function startCountdown(){
-      let t = sec;
-      adBtn.innerText = `Ad playing... ${t}s`;
-      adBtn.disabled = true;
-
-      const timer = setInterval(()=>{
-        t--;
-        adBtn.innerText = `Ad playing... ${t}s`;
-        if (t <= 0){
-          clearInterval(timer);
-
-          // simulate random fail
-          if (Math.random() < failChance) fail();
-          else success();
-        }
-      }, 1000);
-    }
-
-    startCountdown();
-  }
-
-  function updateUI(){
-    const walletEl = document.getElementById("wallet");
-    const leftEl = document.getElementById("left");
-    const adBtn = document.getElementById("adBtn");
-    const spinBtn = document.getElementById("spinBtn");
-
-    walletEl.innerText = getWallet();
-    leftEl.innerText = spinsLeft();
-
-    // lock spin until unlocked
-    if (spinsLeft() <= 0){
-      adBtn.disabled = true;
-      adBtn.innerText = "Daily limit reached ✅";
-      spinBtn.disabled = true;
-      spinBtn.innerText = "🎡 Spin Wheel (Locked)";
-      return;
-    }
-
-    if (isUnlocked()){
-      const s = formatUnlockSec();
-      adBtn.disabled = true;
-      adBtn.innerText = `✅ Spin Unlocked (${s}s left)`;
-      spinBtn.disabled = false;
-      spinBtn.innerText = "🎡 Spin Wheel";
-    } else {
-      adBtn.disabled = false;
-      adBtn.innerText = "🎬 Watch Ad to Unlock Spin";
-      spinBtn.disabled = true;
-      spinBtn.innerText = "🎡 Spin Wheel (Locked)";
-    }
-  }
-
-  function logout(){
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("loginUser");
-    window.location.href = "login.html";
-  }
-
-  // Splash hide (always)
-  window.addEventListener("load", ()=>{
-    const sp = document.getElementById("splash");
-    if (sp) sp.style.display = "none";
-  });
-  setTimeout(()=>{
-    const sp = document.getElementById("splash");
-    if (sp) sp.style.display = "none";
-  }, 1200);
-
-  // Refresh UI
-  updateUI();
-  setInterval(updateUI, 1000);
-
-  // Service worker (optional)
-  try{
-    if ("serviceWorker" in navigator){
-      navigator.serviceWorker.register("service-worker.js");
-    }
-  } catch(e){}
-</script>
-
-</body>
-  <head>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
-    
     <style>
-        /* Aapka purana CSS yahan rahega, maine install button add kar diya hai */
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { padding: 20px; padding-bottom: 120px; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .btn { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
         
         /* Floating Install Button Styling */
         #installBtn {
             position: fixed;
-            bottom: 100px; 
+            bottom: 80px; 
             right: 20px;
             background-color: #28a745;
             color: white;
@@ -353,10 +24,9 @@
             box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
             cursor: pointer;
             z-index: 1000;
-            display: none; /* Sirf tab dikhega jab install option aayega */
+            display: none; 
         }
 
-        /* Vibrate Animation */
         @keyframes vibrate {
             0% { transform: translate(0); }
             20% { transform: translate(-2px, 2px); }
@@ -365,73 +35,60 @@
             80% { transform: translate(2px, -2px); }
             100% { transform: translate(0); }
         }
-
-        .vibrate-active {
-            animation: vibrate 0.3s linear infinite;
-        }
-
-        /* Baaki UI Styles (Jo aapki image mein dikh raha hai) */
-        .container { padding: 20px; }
-        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .btn { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .vibrate-active { animation: vibrate 0.3s linear infinite; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="card">
-            <h2>Welcome, admin ✅</h2>
+            <h2 style="margin-top:0;">Welcome, admin ✅</h2>
             <p style="color: gray; font-size: 14px;">Wallet, spins & spin unlock yahin se control hoga.</p>
             
-            <div style="background:#f8f9fa; padding:10px; border-radius:10px; margin-bottom:10px;">
+            <div style="background:#f8f9fa; padding:12px; border-radius:10px; margin-bottom:10px; border-left: 5px solid #007bff;">
                 <strong>Wallet: 10 🪙</strong>
             </div>
             
-            <div style="background:#f8f9fa; padding:10px; border-radius:10px; margin-bottom:10px;">
+            <div style="background:#f8f9fa; padding:12px; border-radius:10px; margin-bottom:10px; border-left: 5px solid #007bff;">
                 <strong>Spins left: 5/5</strong>
             </div>
 
             <button class="btn" style="background:#eee;">🎬 Watch Ad to Unlock Spin</button>
             <button class="btn" style="background:#007bff; color:white;">🎡 Spin Wheel (Locked)</button>
             <button class="btn" style="background:#1a1d23; color:white;">💸 Withdraw</button>
-            <button class="btn" style="background:#ffe5e5; color:red;">Logout</button>
+            <button class="btn" style="background:#ffe5e5; color:red; margin-top:20px;">Logout</button>
             
-            <div style="text-align:center; margin-top:10px; color:#007bff; font-size:12px;">
-                Rules | Privacy | Terms
+            <div style="text-align:center; margin-top:15px; font-size:13px;">
+                <a href="rules.html" style="text-decoration:none; color:#007bff;">Rules</a> | 
+                <a href="privacy.html" style="text-decoration:none; color:#007bff;">Privacy</a> | 
+                <a href="terms.html" style="text-decoration:none; color:#007bff;">Terms</a>
             </div>
         </div>
     </div>
 
     <button id="installBtn" class="vibrate-active">📲 Install App</button>
 
-    <div style="position:fixed; bottom:0; width:100%; background:#ddd; text-align:center; padding:10px;">
+    <div style="position:fixed; bottom:0; width:100%; background:#e9ecef; text-align:center; padding:15px; border-top:1px solid #ccc; font-weight:bold;">
         📢 Banner Ad (AdMob)
     </div>
 
     <script>
-        // Install Logic
         let deferredPrompt;
         const installBtn = document.getElementById('installBtn');
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            installBtn.style.display = 'block'; // Button show hoga
+            installBtn.style.display = 'block';
         });
 
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBtn.style.display = 'none';
-                }
+                if (outcome === 'accepted') installBtn.style.display = 'none';
                 deferredPrompt = null;
             }
-        });
-
-        window.addEventListener('appinstalled', () => {
-            installBtn.style.display = 'none';
         });
     </script>
 </body>
