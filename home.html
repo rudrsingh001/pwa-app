@@ -328,35 +328,111 @@
 </body>
   <head>
 </html>
-/* Floating Install Button Styling */
-#installBtn {
-    position: fixed;
-    bottom: 100px; /* Banner ad se thoda upar */
-    right: 20px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 50px;
-    padding: 12px 20px;
-    font-weight: bold;
-    box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-    cursor: pointer;
-    z-index: 1000;
-    display: none; /* Default hidden, JS se show hoga */
-}
-
-/* Vibrate Animation */
-@keyframes vibrate {
-    0% { transform: translate(0); }
-    20% { transform: translate(-2px, 2px); }
-    40% { transform: translate(-2px, -2px); }
-    60% { transform: translate(2px, 2px); }
-    80% { transform: translate(2px, -2px); }
-    100% { transform: translate(0); }
-}
-
-.vibrate-active {
- animation: vibrate 0.3s linear infinite;
-}
-</html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    
+    <style>
+        /* Aapka purana CSS yahan rahega, maine install button add kar diya hai */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        
+        /* Floating Install Button Styling */
+        #installBtn {
+            position: fixed;
+            bottom: 100px; 
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-weight: bold;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 1000;
+            display: none; /* Sirf tab dikhega jab install option aayega */
+        }
+
+        /* Vibrate Animation */
+        @keyframes vibrate {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        .vibrate-active {
+            animation: vibrate 0.3s linear infinite;
+        }
+
+        /* Baaki UI Styles (Jo aapki image mein dikh raha hai) */
+        .container { padding: 20px; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .btn { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <h2>Welcome, admin ✅</h2>
+            <p style="color: gray; font-size: 14px;">Wallet, spins & spin unlock yahin se control hoga.</p>
+            
+            <div style="background:#f8f9fa; padding:10px; border-radius:10px; margin-bottom:10px;">
+                <strong>Wallet: 10 🪙</strong>
+            </div>
+            
+            <div style="background:#f8f9fa; padding:10px; border-radius:10px; margin-bottom:10px;">
+                <strong>Spins left: 5/5</strong>
+            </div>
+
+            <button class="btn" style="background:#eee;">🎬 Watch Ad to Unlock Spin</button>
+            <button class="btn" style="background:#007bff; color:white;">🎡 Spin Wheel (Locked)</button>
+            <button class="btn" style="background:#1a1d23; color:white;">💸 Withdraw</button>
+            <button class="btn" style="background:#ffe5e5; color:red;">Logout</button>
+            
+            <div style="text-align:center; margin-top:10px; color:#007bff; font-size:12px;">
+                Rules | Privacy | Terms
+            </div>
+        </div>
+    </div>
+
+    <button id="installBtn" class="vibrate-active">📲 Install App</button>
+
+    <div style="position:fixed; bottom:0; width:100%; background:#ddd; text-align:center; padding:10px;">
+        📢 Banner Ad (AdMob)
+    </div>
+
+    <script>
+        // Install Logic
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block'; // Button show hoga
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
